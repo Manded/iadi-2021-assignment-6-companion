@@ -16,8 +16,12 @@ limitations under the License.
 
 package pt.unl.fct.di.iadidemo.bookshelf.domain
 
+import org.springframework.data.jpa.repository.Modifying
+import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.CrudRepository
 import org.springframework.data.repository.PagingAndSortingRepository
+import java.util.*
+import javax.transaction.Transactional
 
 interface UserRepository : PagingAndSortingRepository<UserDAO, String>
 
@@ -26,3 +30,18 @@ interface BookRepository : CrudRepository<BookDAO, Long>
 interface RoleRepository : CrudRepository<RoleDAO, String>
 
 interface AuthorRepository : CrudRepository<AuthorDAO, Long>
+
+interface ImageRepository : CrudRepository<ImageDAO, Long>
+
+interface TokenRepository : CrudRepository<TokenDAO, String> {
+
+    @Query("select t from UserDAO as u inner join u.tokens as t where u.name = :username and t.token = :token")
+    fun getTokenByUser(username: String,
+                       token: String): Optional<TokenDAO>
+
+    @Transactional
+    @Modifying
+    @Query("delete from TokenDAO t where t.owner.username=:username")
+    fun deleteTokensByUser(username: String)
+
+}

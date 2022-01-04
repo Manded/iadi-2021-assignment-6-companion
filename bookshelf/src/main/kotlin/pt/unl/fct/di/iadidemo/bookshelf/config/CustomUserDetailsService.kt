@@ -31,7 +31,6 @@ data class CustomUserDetails(
 
 @Service
 class CustomUserDetailsService(val users: UserService) : UserDetailsService {
-
     override fun loadUserByUsername(username: String?): UserDetails {
 
         username?.let {

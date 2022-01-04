@@ -35,7 +35,7 @@ class BookService(val books: BookRepository) {
 
         val book = maybeBook.orElseThrow { NoBookException("Book with ${id} was found") }
         book.authors = update.authors
-        book.images = update.images
+        book.image = update.image
         book.title = update.title
 
         books.save(book)

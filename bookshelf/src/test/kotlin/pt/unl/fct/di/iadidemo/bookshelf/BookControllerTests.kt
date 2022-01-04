@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import pt.unl.fct.di.iadidemo.bookshelf.domain.BookDAO
 import pt.unl.fct.di.iadidemo.bookshelf.application.services.BookService
 import org.springframework.security.test.context.support.WithMockUser
+import pt.unl.fct.di.iadidemo.bookshelf.domain.ImageDAO
 
 
 @RunWith(SpringRunner::class)
@@ -30,8 +31,8 @@ class BookControllerTests {
     lateinit var books: BookService
 
     companion object {
-        val b1 = BookDAO(1,"LOR", mutableListOf(), emptyList())
-        val b2 = BookDAO(2, "Dune", mutableListOf(), emptyList())
+        val b1 = BookDAO(1,"LOR", mutableListOf(), ImageDAO(0,"https://covers.openlibrary.org/b/id/9251896-L.jpg"))
+        val b2 = BookDAO(2, "Dune", mutableListOf(), ImageDAO(0,"https://covers.openlibrary.org/b/id/11153217-L.jpg"))
 
         val l = listOf<BookDAO>(b1,b2)
 

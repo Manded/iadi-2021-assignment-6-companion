@@ -6,11 +6,14 @@ import io.jsonwebtoken.SignatureAlgorithm
 import org.springframework.security.authentication.AuthenticationManager
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
 import org.springframework.security.core.Authentication
+import org.springframework.security.core.GrantedAuthority
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter
 import org.springframework.web.filter.GenericFilterBean
-import pt.unl.fct.di.iadidemo.bookshelf.application.services.UserService
+import pt.unl.fct.di.iadidemo.bookshelf.domain.RoleDAO
 import pt.unl.fct.di.iadidemo.bookshelf.domain.UserDAO
+import pt.unl.fct.di.iadidemo.bookshelf.application.services.UserService
 import java.util.*
 import javax.servlet.FilterChain
 import javax.servlet.ServletRequest
@@ -26,26 +29,28 @@ object JWTSecret {
     const val VALIDITY = 1000 * 60 * 10 // 10 minutes in milliseconds
 }
 
-private fun addResponseToken(authentication: Authentication, response: HttpServletResponse) {
+private fun addResponseToken(authentication: Authentication, response: HttpServletResponse, roles: List<RoleDAO>): String {
 
     val claims = HashMap<String, Any?>()
     claims["username"] = authentication.name
-
+    claims["roles"] = roles.joinToString(", ")
     val token = Jwts
-            .builder()
-            .setClaims(claims)
-            .setSubject(JWTSecret.SUBJECT)
-            .setIssuedAt(Date(System.currentTimeMillis()))
-            .setExpiration(Date(System.currentTimeMillis() + JWTSecret.VALIDITY))
-            .signWith(SignatureAlgorithm.HS256, JWTSecret.KEY)
-            .compact()
+        .builder()
+        .setClaims(claims)
+        .setSubject(JWTSecret.SUBJECT)
+        .setIssuedAt(Date(System.currentTimeMillis()))
+        .setExpiration(Date(System.currentTimeMillis() + JWTSecret.VALIDITY))
+        .signWith(SignatureAlgorithm.HS256, JWTSecret.KEY)
+        .compact()
 
     response.addHeader("Authorization", "Bearer $token")
+    return token
 }
 
 class UserPasswordAuthenticationFilterToJWT (
-        defaultFilterProcessesUrl: String?,
-        private val anAuthenticationManager: AuthenticationManager
+    defaultFilterProcessesUrl: String?,
+    private val anAuthenticationManager: AuthenticationManager,
+    private val users: UserService
 ) : AbstractAuthenticationProcessingFilter(defaultFilterProcessesUrl) {
 
     override fun attemptAuthentication(request: HttpServletRequest?,
@@ -70,23 +75,22 @@ class UserPasswordAuthenticationFilterToJWT (
                                           auth: Authentication) {
 
         users.addToken(
-                auth.name,
-                addResponseToken(
-                        auth,
-                        response,
-                        jwtSecret,
-                        users.findUser(auth.name)
-                                .get().role
-                )
+            auth.name,
+            addResponseToken(
+                auth,
+                response,
+                users.findUser(auth.name)
+                    .get().roles
+            )
         )
-                .ifPresentOrElse({},
-                        { (response as HttpServletResponse).sendError(HttpServletResponse.SC_NOT_FOUND) }
-                )
+            .ifPresentOrElse({},
+                { response.sendError(HttpServletResponse.SC_NOT_FOUND) }
+            )
     }
 }
 
 class UserAuthToken(private var login:String,
-                    private val authorities: List<GrantedAuthority>)) : Authentication {
+                    private val authorities: List<GrantedAuthority>) : Authentication {
 
     override fun getAuthorities() = authorities
 
@@ -103,7 +107,8 @@ class UserAuthToken(private var login:String,
     override fun getDetails() = login
 }
 
-class JWTAuthenticationFilter: GenericFilterBean() {
+class JWTAuthenticationFilter(
+    private val users: UserService) : GenericFilterBean() {
 
     // To try it out, go to https://jwt.io to generate custom tokens, in this case we only need a name...
 
@@ -116,8 +121,8 @@ class JWTAuthenticationFilter: GenericFilterBean() {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             val token = authHeader.substring(7) // Skip 7 characters for "Bearer "
             val claims = Jwts.parser()
-                    .setSigningKey(jwtSecret.KEY)
-                    .parseClaimsJws(token).body
+                .setSigningKey(JWTSecret.KEY)
+                .parseClaimsJws(token).body
 
             // should check for token validity here (e.g. expiration date, session in db, etc.)
             val exp = (claims["exp"] as Int).toLong()
@@ -128,8 +133,8 @@ class JWTAuthenticationFilter: GenericFilterBean() {
             else {
 
                 val authentication = UserAuthToken(
-                        claims["username"] as String,
-                        listOf(SimpleGrantedAuthority("ROLE_" + claims["role"]))
+                    claims["username"] as String,
+                    listOf(SimpleGrantedAuthority("ROLE_" + claims["role"]))
                 )
                 // Can go to the database to get the actual user information (e.g. authorities)
 
@@ -138,14 +143,13 @@ class JWTAuthenticationFilter: GenericFilterBean() {
                 // Renew token with extended time here. (before doFilter)
                 //check indexof (IndexOf func replacement)
                 users.refreshToken(
-                        authentication.name,
-                        addResponseToken(
-                                authentication,
-                                response as HttpServletResponse,
-                                jwtSecret,
-                                users.findUser(authentication.name)
-                                        .get().role
-                        )
+                    authentication.name,
+                    addResponseToken(
+                        authentication,
+                        response as HttpServletResponse,
+                        users.findUser(authentication.name)
+                            .get().roles
+                    )
                 )
 
                 chain!!.doFilter(request, response)
@@ -171,28 +175,28 @@ class JWTAuthenticationFilter: GenericFilterBean() {
  */
 
 class UserPasswordSignUpFilterToJWT (
-        defaultFilterProcessesUrl: String?,
-        private val users: UserService
+    defaultFilterProcessesUrl: String?,
+    private val users: UserService
 ) : AbstractAuthenticationProcessingFilter(defaultFilterProcessesUrl) {
 
     override fun attemptAuthentication(request: HttpServletRequest?,
                                        response: HttpServletResponse?): Authentication? {
         //getting user from request body
         val user = ObjectMapper().readValue(
-                request!!.inputStream,
-                UserDAO::class.java
+            request!!.inputStream,
+            UserDAO::class.java
         )
         val userDB = users.addUser(user)
         return if (userDB.isPresent)
             userDB.get()
-                    .let {
-                        val auth = UserAuthToken(
-                                user.username,
-                                listOf(SimpleGrantedAuthority("ROLE_USER"))
-                        )
-                        SecurityContextHolder.getContext().authentication = auth
-                        auth
-                    }
+                .let {
+                    val auth = UserAuthToken(
+                        user.username,
+                        listOf(SimpleGrantedAuthority("ROLE_USER"))
+                    )
+                    SecurityContextHolder.getContext().authentication = auth
+                    auth
+                }
         else {
             (response as HttpServletResponse).sendError(HttpServletResponse.SC_CONFLICT)
             null
@@ -208,8 +212,8 @@ class UserPasswordSignUpFilterToJWT (
     }
 
     class UserPasswordSignOutFilterToJWT(
-            defaultFilterProcessesUrl: String?,
-            private val users: UserService
+        defaultFilterProcessesUrl: String?,
+        private val users: UserService
     ) : AbstractAuthenticationProcessingFilter(defaultFilterProcessesUrl) {
         override fun attemptAuthentication(request: HttpServletRequest?,
                                            response: HttpServletResponse?): Authentication? {
@@ -217,8 +221,8 @@ class UserPasswordSignUpFilterToJWT (
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 val token = authHeader.substring(7) // Skip 7 characters for "Bearer "
                 val claims = Jwts.parser()
-                        .setSigningKey(JWTSecret.KEY)
-                        .parseClaimsJws(token).body
+                    .setSigningKey(JWTSecret.KEY)
+                    .parseClaimsJws(token).body
                 SecurityContextHolder.clearContext()
                 val username = claims["username"] as String
                 users.deleteUserTokens(username)

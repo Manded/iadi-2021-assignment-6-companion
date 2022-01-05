@@ -34,7 +34,7 @@ class BookController(val books: BookService, val authors: AuthorService) : Books
                 it.id,
                 it.title,
                 it.authors.map { AuthorsBookDTO(it.name) },
-                it.images.map { ImageDTO(it.url) }
+                ImageDTO(it.image.url)
             )
         }
 
@@ -42,7 +42,7 @@ class BookController(val books: BookService, val authors: AuthorService) : Books
         override fun addOne(elem: BookDTO):Unit {
             val authors = authors.findByIds(elem.authors) // May return 400 (invalid request) if they do not exist
 
-            books.addOne(BookDAO(0, elem.title, authors.toMutableList(), elem.images.map { ImageDAO(0, it ) }));
+            books.addOne(BookDAO(0, elem.title, authors.toMutableList(), ImageDAO(0, elem.image)));
         }
 
         @CanSeeBook
@@ -55,7 +55,7 @@ class BookController(val books: BookService, val authors: AuthorService) : Books
                         it.id,
                         it.title,
                         it.authors.map { AuthorsBookDTO(it.name) },
-                        it.images.map { ImageDTO(it.url) }
+                        ImageDTO(it.image.url)
                     )
                 }
 
@@ -63,7 +63,7 @@ class BookController(val books: BookService, val authors: AuthorService) : Books
         override fun updateOne(id: Long, elem: BookDTO) {
             val authors = authors.findByIds(elem.authors) // May return 400 (invalid request) if they do not exist
 
-            books.updateOne(id, BookDAO(0, elem.title, authors.toMutableList(), elem.images.map { ImageDAO(0, it ) }))
+            books.updateOne(id, BookDAO(0, elem.title, authors.toMutableList(), ImageDAO(0, elem.image)))
         }
 
         @CanDeleteBook

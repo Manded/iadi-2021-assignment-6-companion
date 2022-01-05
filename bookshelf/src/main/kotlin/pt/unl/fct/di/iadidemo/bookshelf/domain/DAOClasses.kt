@@ -1,5 +1,7 @@
 package pt.unl.fct.di.iadidemo.bookshelf.domain
 
+import org.hibernate.annotations.Fetch
+import org.hibernate.annotations.FetchMode
 import javax.persistence.*
 
 
@@ -13,8 +15,8 @@ data class BookDAO(
     @ManyToMany
     var authors:MutableList<AuthorDAO>,
 
-    @OneToMany(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
-    var images:List<ImageDAO>
+    @OneToOne
+    var image:ImageDAO
     )
 
 
@@ -48,10 +50,24 @@ data class UserDAO(
 
     val name:String,
 
+    @Fetch(FetchMode.SELECT)
+    @OneToMany(fetch= FetchType.EAGER)
+    val tokens: MutableList<TokenDAO>
     )
 
 @Entity
 data class RoleDAO(
+
     @Id
     val tag:String
+)
+@Entity
+data class TokenDAO(
+    @Id @GeneratedValue
+    val id: Long,
+
+    var token:String,
+
+    @ManyToOne
+    val owner:UserDAO
 )

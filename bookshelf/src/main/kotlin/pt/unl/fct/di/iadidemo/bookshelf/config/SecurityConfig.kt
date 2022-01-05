@@ -10,37 +10,37 @@ import pt.unl.fct.di.iadidemo.bookshelf.application.services.UserService
 
 @Configuration
 class SecurityConfig(
-        val customUserDetails: CustomUserDetailsService,
-        val users: UserService
+    val customUserDetails: CustomUserDetailsService,
+    val users: UserService
 ) : WebSecurityConfigurerAdapter() {
 
     override fun configure(http: HttpSecurity) {
         http
-                .csrf().disable() // This allows applications to access endpoints from any source location
-                .authorizeRequests()
-                .antMatchers("/swagger-ui.html").permitAll()
-                .antMatchers("/user/books").permitAll()
-                .antMatchers("/admin/**").hasRole("ADMIN")
-                .antMatchers("/user/**").authenticated()
-                .anyRequest().authenticated()
-                .and().httpBasic()
-                // Missing the sign-up, sign-in and sign-out endpoints
-                // Missing the configuration for filters
-                .and()
-                .addFilterBefore(UserPasswordAuthenticationFilterToJWT("/login",
-                        super.authenticationManagerBean()),
-                        BasicAuthenticationFilter::class.java)
-                .addFilterBefore(UserPasswordSignUpFilterToJWT("/signup", users),
-                        BasicAuthenticationFilter::class.java)
-                .addFilterBefore(JWTAuthenticationFilter(),
-                        BasicAuthenticationFilter::class.java)
-                .addFilterBefore(
-                        UserPasswordSignOutFilterToJWT(
-                                "/signout",
-                                users
-                        ),
-                        BasicAuthenticationFilter::class.java
-                )
+            .csrf().disable() // This allows applications to access endpoints from any source location
+            .authorizeRequests()
+            .antMatchers("/swagger-ui.html").permitAll()
+            .antMatchers("/user/books").permitAll()
+            .antMatchers("/admin/**").hasRole("ADMIN")
+            .antMatchers("/user/**").authenticated()
+            .anyRequest().authenticated()
+            .and().httpBasic()
+            // Missing the sign-up, sign-in and sign-out endpoints
+            // Missing the configuration for filters
+            .and()
+            .addFilterBefore(UserPasswordAuthenticationFilterToJWT("/login",
+                super.authenticationManagerBean(),users),
+                BasicAuthenticationFilter::class.java)
+            .addFilterBefore(UserPasswordSignUpFilterToJWT("/signup", users),
+                BasicAuthenticationFilter::class.java)
+            .addFilterBefore(JWTAuthenticationFilter(users),
+                BasicAuthenticationFilter::class.java)
+            .addFilterBefore(
+                UserPasswordSignUpFilterToJWT.UserPasswordSignOutFilterToJWT(
+                    "/signout",
+                    users
+                ),
+                BasicAuthenticationFilter::class.java
+            )
 
 
     }

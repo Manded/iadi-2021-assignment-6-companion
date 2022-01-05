@@ -69,14 +69,26 @@ class UserPasswordAuthenticationFilterToJWT (
                                           filterChain: FilterChain?,
                                           auth: Authentication) {
 
-        // When returning from the Filter loop, add the token to the response
-        addResponseToken(auth, response)
+        users.addToken(
+                auth.name,
+                addResponseToken(
+                        auth,
+                        response,
+                        jwtSecret,
+                        users.findUser(auth.name)
+                                .get().role
+                )
+        )
+                .ifPresentOrElse({},
+                        { (response as HttpServletResponse).sendError(HttpServletResponse.SC_NOT_FOUND) }
+                )
     }
 }
 
-class UserAuthToken(private var login:String) : Authentication {
+class UserAuthToken(private var login:String,
+                    private val authorities: List<GrantedAuthority>)) : Authentication {
 
-    override fun getAuthorities() = null
+    override fun getAuthorities() = authorities
 
     override fun setAuthenticated(isAuthenticated: Boolean) {}
 
@@ -101,9 +113,11 @@ class JWTAuthenticationFilter: GenericFilterBean() {
 
         val authHeader = (request as HttpServletRequest).getHeader("Authorization")
 
-        if( authHeader != null && authHeader.startsWith("Bearer ") ) {
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
             val token = authHeader.substring(7) // Skip 7 characters for "Bearer "
-            val claims = Jwts.parser().setSigningKey(JWTSecret.KEY).parseClaimsJws(token).body
+            val claims = Jwts.parser()
+                    .setSigningKey(jwtSecret.KEY)
+                    .parseClaimsJws(token).body
 
             // should check for token validity here (e.g. expiration date, session in db, etc.)
             val exp = (claims["exp"] as Int).toLong()
@@ -113,13 +127,26 @@ class JWTAuthenticationFilter: GenericFilterBean() {
 
             else {
 
-                val authentication = UserAuthToken(claims["username"] as String)
+                val authentication = UserAuthToken(
+                        claims["username"] as String,
+                        listOf(SimpleGrantedAuthority("ROLE_" + claims["role"]))
+                )
                 // Can go to the database to get the actual user information (e.g. authorities)
 
                 SecurityContextHolder.getContext().authentication = authentication
 
                 // Renew token with extended time here. (before doFilter)
-                addResponseToken(authentication, response as HttpServletResponse)
+                //check indexof (IndexOf func replacement)
+                users.refreshToken(
+                        authentication.name,
+                        addResponseToken(
+                                authentication,
+                                response as HttpServletResponse,
+                                jwtSecret,
+                                users.findUser(authentication.name)
+                                        .get().role
+                        )
+                )
 
                 chain!!.doFilter(request, response)
             }
@@ -151,23 +178,55 @@ class UserPasswordSignUpFilterToJWT (
     override fun attemptAuthentication(request: HttpServletRequest?,
                                        response: HttpServletResponse?): Authentication? {
         //getting user from request body
-        val user = ObjectMapper().readValue(request!!.inputStream, UserDAO::class.java)
-
-        return users
-                .addUser(user)
-                .orElse( null )
-                .let {
-                    val auth = UserAuthToken(user.username)
-                    SecurityContextHolder.getContext().authentication = auth
-                    auth
-                }
+        val user = ObjectMapper().readValue(
+                request!!.inputStream,
+                UserDAO::class.java
+        )
+        val userDB = users.addUser(user)
+        return if (userDB.isPresent)
+            userDB.get()
+                    .let {
+                        val auth = UserAuthToken(
+                                user.username,
+                                listOf(SimpleGrantedAuthority("ROLE_USER"))
+                        )
+                        SecurityContextHolder.getContext().authentication = auth
+                        auth
+                    }
+        else {
+            (response as HttpServletResponse).sendError(HttpServletResponse.SC_CONFLICT)
+            null
         }
+    }
+
 
     override fun successfulAuthentication(request: HttpServletRequest,
                                           response: HttpServletResponse,
                                           filterChain: FilterChain?,
                                           auth: Authentication) {
 
-        addResponseToken(auth, response)
     }
+
+    class UserPasswordSignOutFilterToJWT(
+            defaultFilterProcessesUrl: String?,
+            private val users: UserService
+    ) : AbstractAuthenticationProcessingFilter(defaultFilterProcessesUrl) {
+        override fun attemptAuthentication(request: HttpServletRequest?,
+                                           response: HttpServletResponse?): Authentication? {
+            val authHeader = (request as HttpServletRequest).getHeader("Authorization")
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                val token = authHeader.substring(7) // Skip 7 characters for "Bearer "
+                val claims = Jwts.parser()
+                        .setSigningKey(JWTSecret.KEY)
+                        .parseClaimsJws(token).body
+                SecurityContextHolder.clearContext()
+                val username = claims["username"] as String
+                users.deleteUserTokens(username)
+            } else {
+                (response as HttpServletResponse).sendError(HttpServletResponse.SC_UNAUTHORIZED)
+            }
+            return null
+        }
+    }
+
 }

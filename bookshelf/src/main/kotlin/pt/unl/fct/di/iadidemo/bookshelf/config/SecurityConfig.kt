@@ -18,7 +18,7 @@ class SecurityConfig(
         http
             .csrf().disable() // This allows applications to access endpoints from any source location
             .authorizeRequests()
-            .antMatchers("/swagger-ui.html").permitAll()
+            .antMatchers("/swagger-ui/index.html").permitAll()
             .antMatchers("/user/books").permitAll()
             .antMatchers("/admin/**").hasRole("ADMIN")
             .antMatchers("/user/**").authenticated()
@@ -47,24 +47,24 @@ class SecurityConfig(
 
     override fun configure(auth: AuthenticationManagerBuilder) {
         auth
-                // To declare two users with
-                .inMemoryAuthentication()
-                .withUser("user")
-                .password(BCryptPasswordEncoder().encode("password"))
-                .roles("USER")
+            // To declare two users with
+            .inMemoryAuthentication()
+            .withUser("user")
+            .password(BCryptPasswordEncoder().encode("password"))
+            .roles("USER")
 
-                .and()
-                .withUser("admin")
-                .password(BCryptPasswordEncoder().encode("password"))
-                .roles("ADMIN")
+            .and()
+            .withUser("admin")
+            .password(BCryptPasswordEncoder().encode("password"))
+            .roles("ADMIN")
 
-                // Set the way passwords are encoded in the system
-                .and()
-                .passwordEncoder(BCryptPasswordEncoder())
+            // Set the way passwords are encoded in the system
+            .and()
+            .passwordEncoder(BCryptPasswordEncoder())
 
-                // Connect spring security to the domain/data model
-                .and()
-                .userDetailsService(customUserDetails)
-                .passwordEncoder(BCryptPasswordEncoder())
+            // Connect spring security to the domain/data model
+            .and()
+            .userDetailsService(customUserDetails)
+            .passwordEncoder(BCryptPasswordEncoder())
     }
 }

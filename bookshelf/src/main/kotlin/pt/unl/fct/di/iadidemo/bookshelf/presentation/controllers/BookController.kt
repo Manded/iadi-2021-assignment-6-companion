@@ -62,12 +62,13 @@ class BookController(val books: BookService, val authors: AuthorService) : Books
         @CanUpdateBook
         override fun updateOne(id: Long, elem: BookDTO) {
             val authors = authors.findByIds(elem.authors) // May return 400 (invalid request) if they do not exist
-
             books.updateOne(id, BookDAO(0, elem.title, authors.toMutableList(), ImageDAO(0, elem.image)))
         }
 
         @CanDeleteBook
         override fun deleteOne(id: Long) {
-            TODO("Not implemented")
+            if(books.getOne(id).isPresent) {
+                books.delOne(id)
+            }
         }
 }

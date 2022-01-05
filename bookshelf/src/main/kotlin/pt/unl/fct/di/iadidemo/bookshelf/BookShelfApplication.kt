@@ -20,7 +20,7 @@ class SecurityApplication(
     override fun run(vararg args: String?) {
 
         val r1 = RoleDAO("ADMIN")
-        val r2 = RoleDAO("REVIEWER")
+        val r2 = RoleDAO("EDITOR")
         val r3 = RoleDAO("USER")
         roles.saveAll(listOf(r1, r2, r3))
 

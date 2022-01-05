@@ -2,6 +2,8 @@ package pt.unl.fct.di.iadidemo.bookshelf.domain
 
 import org.hibernate.annotations.Fetch
 import org.hibernate.annotations.FetchMode
+import org.hibernate.annotations.LazyCollection
+import org.hibernate.annotations.LazyCollectionOption
 import javax.persistence.*
 
 
@@ -50,8 +52,8 @@ data class UserDAO(
 
     val name:String,
 
-    @Fetch(FetchMode.SELECT)
-    @OneToMany(fetch= FetchType.EAGER)
+    @LazyCollection(LazyCollectionOption.FALSE)
+    @OneToMany
     val tokens: MutableList<TokenDAO>
     )
 
@@ -66,8 +68,10 @@ data class TokenDAO(
     @Id @GeneratedValue
     val id: Long,
 
+    @Column( length = 300 )
     var token:String,
 
+    @LazyCollection(LazyCollectionOption.FALSE)
     @ManyToOne
     val owner:UserDAO
 )

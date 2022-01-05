@@ -26,7 +26,7 @@ annotation class CanAddBook {
 @PreAuthorize(CanUpdateBook.condition)
 annotation class CanUpdateBook {
     companion object {
-        const val condition:String = "hasRole('REVIEWER')"
+        const val condition:String = "hasRole('EDITOR')"
     }
 }
 

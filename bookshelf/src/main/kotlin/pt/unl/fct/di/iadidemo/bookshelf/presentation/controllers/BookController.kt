@@ -25,7 +25,7 @@ import pt.unl.fct.di.iadidemo.bookshelf.presentation.api.dto.*
  */
 
 @RestController
-class BookController(val books: BookService, val authors: AuthorService) : BooksAPI {
+class BookController(val books: BookService, val authorsS: AuthorService) : BooksAPI {
 
     @CanSeeBooks
     override fun getAll(): List<BookListDTO> =
@@ -43,7 +43,9 @@ class BookController(val books: BookService, val authors: AuthorService) : Books
             //val authors = authors.findByIds(elem.authors) // May return 400 (invalid request) if they do not exist
             val authors = mutableListOf<AuthorDAO>();
             for(a in elem.authors){
-                authors.add(AuthorDAO(0,a))
+                val author = AuthorDAO(0,a)
+                authors.add(author)
+                authorsS.authors.save(author)
             }
             books.addOne(BookDAO(0, elem.title, authors.toMutableList(), elem.image));
         }
@@ -67,7 +69,9 @@ class BookController(val books: BookService, val authors: AuthorService) : Books
             //val authors = authors.findByIds(elem.authors) // May return 400 (invalid request) if they do not exist
             val authors = mutableListOf<AuthorDAO>();
             for(a in elem.authors){
-                authors.add(AuthorDAO(0,a));
+                val author = AuthorDAO(0,a)
+                authors.add(author)
+                authorsS.authors.save(author)
             }
             books.updateOne(id, BookDAO(0, elem.title, authors, elem.image))
         }

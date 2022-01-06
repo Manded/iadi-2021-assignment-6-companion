@@ -17,8 +17,7 @@ data class BookDAO(
     @ManyToMany
     var authors:MutableList<AuthorDAO>,
 
-    @OneToOne
-    var image:ImageDAO
+    var image:String
     )
 
 
@@ -28,15 +27,6 @@ data class AuthorDAO(
     val id:Long,
 
     val name:String,
-
-    )
-
-@Entity
-data class ImageDAO(
-    @Id @GeneratedValue
-    val id:Long,
-
-    val url:String,
 
     )
 

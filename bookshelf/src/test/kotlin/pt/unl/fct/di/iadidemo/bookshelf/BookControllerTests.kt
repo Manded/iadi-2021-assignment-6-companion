@@ -1,4 +1,4 @@
-package pt.unl.fct.di.iadidemo.bookshelf
+/* package pt.unl.fct.di.iadidemo.bookshelf
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.junit.Test
@@ -65,3 +65,4 @@ class BookControllerTests {
                 .andReturn()
     }
 }
+*/

@@ -7,7 +7,7 @@ import pt.unl.fct.di.iadidemo.bookshelf.application.services.AuthorService
 import pt.unl.fct.di.iadidemo.bookshelf.domain.BookDAO
 import pt.unl.fct.di.iadidemo.bookshelf.application.services.BookService
 import pt.unl.fct.di.iadidemo.bookshelf.config.*
-import pt.unl.fct.di.iadidemo.bookshelf.domain.ImageDAO
+import pt.unl.fct.di.iadidemo.bookshelf.domain.AuthorDAO
 import pt.unl.fct.di.iadidemo.bookshelf.presentation.api.BooksAPI
 import pt.unl.fct.di.iadidemo.bookshelf.presentation.api.dto.*
 
@@ -34,15 +34,18 @@ class BookController(val books: BookService, val authors: AuthorService) : Books
                 it.id,
                 it.title,
                 it.authors.map { AuthorsBookDTO(it.name) },
-                ImageDTO(it.image.url)
+                it.image
             )
         }
 
         @CanAddBook
         override fun addOne(elem: BookDTO):Unit {
-            val authors = authors.findByIds(elem.authors) // May return 400 (invalid request) if they do not exist
-
-            books.addOne(BookDAO(0, elem.title, authors.toMutableList(), ImageDAO(0, elem.image)));
+            //val authors = authors.findByIds(elem.authors) // May return 400 (invalid request) if they do not exist
+            val authors = mutableListOf<AuthorDAO>();
+            for(a in elem.authors){
+                authors.add(AuthorDAO(0,a))
+            }
+            books.addOne(BookDAO(0, elem.title, authors.toMutableList(), elem.image));
         }
 
         @CanSeeBook
@@ -55,14 +58,18 @@ class BookController(val books: BookService, val authors: AuthorService) : Books
                         it.id,
                         it.title,
                         it.authors.map { AuthorsBookDTO(it.name) },
-                        ImageDTO(it.image.url)
+                        it.image
                     )
                 }
 
         @CanUpdateBook
         override fun updateOne(id: Long, elem: BookDTO) {
-            val authors = authors.findByIds(elem.authors) // May return 400 (invalid request) if they do not exist
-            books.updateOne(id, BookDAO(0, elem.title, authors.toMutableList(), ImageDAO(0, elem.image)))
+            //val authors = authors.findByIds(elem.authors) // May return 400 (invalid request) if they do not exist
+            val authors = mutableListOf<AuthorDAO>();
+            for(a in elem.authors){
+                authors.add(AuthorDAO(0,a));
+            }
+            books.updateOne(id, BookDAO(0, elem.title, authors, elem.image))
         }
 
         @CanDeleteBook

@@ -31,8 +31,6 @@ interface RoleRepository : CrudRepository<RoleDAO, String>
 
 interface AuthorRepository : CrudRepository<AuthorDAO, Long>
 
-interface ImageRepository : CrudRepository<ImageDAO, Long>
-
 interface TokenRepository : CrudRepository<TokenDAO, String> {
 
     @Query("select t from UserDAO as u inner join u.tokens as t where u.name = :username and t.token = :token")
